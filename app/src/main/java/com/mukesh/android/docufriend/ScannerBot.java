@@ -1,28 +1,18 @@
 package com.mukesh.android.docufriend;
 
-import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.os.Build;
-import android.os.Environment;
-import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import net.doo.snap.camera.AutoSnappingController;
 import net.doo.snap.camera.CameraOpenCallback;
 import net.doo.snap.camera.ContourDetectorFrameHandler;
 import net.doo.snap.camera.PictureCallback;
 import net.doo.snap.camera.ScanbotCameraView;
-import net.doo.snap.lib.detector.ContourDetector;
 import net.doo.snap.lib.detector.DetectionResult;
 import net.doo.snap.ui.PolygonView;
 
@@ -30,12 +20,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import io.scanbot.sdk.ui.camera.ShutterButton;
 
 
-public class ScannerBot extends AppCompatActivity implements PictureCallback, ContourDetectorFrameHandler.ResultHandler{
+public class ScannerBot extends AppCompatActivity implements PictureCallback{
 
     private TextView userGuidanceHint;
     private ShutterButton shutterButton;
@@ -53,6 +42,7 @@ public class ScannerBot extends AppCompatActivity implements PictureCallback, Co
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scanner_bot);
         getSupportActionBar().hide();
+        userGuidanceHint = findViewById(R.id.userGuidanceHint);
         scanbotCameraView = (ScanbotCameraView) findViewById(R.id.camera);
         scanbotCameraView.setCameraOpenCallback(new CameraOpenCallback() {
             @Override
@@ -71,14 +61,28 @@ public class ScannerBot extends AppCompatActivity implements PictureCallback, Co
         });
 
         frameHandler = ContourDetectorFrameHandler.attach(scanbotCameraView);
+        frameHandler.addResultHandler(new ContourDetectorFrameHandler.ResultHandler() {
+
+            @Override
+            public boolean handleResult(final ContourDetectorFrameHandler.DetectedFrame result) {
+                userGuidanceHint.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showUserGuidance(result.detectionResult);
+                    }
+                });
+                return false; // typically you need to return false
+            }
+
+        });
         polygonView = (PolygonView) findViewById(R.id.polygonView);
         frameHandler.addResultHandler(polygonView);
         autoSnappingController = AutoSnappingController.attach(scanbotCameraView,frameHandler);
-        autoSnappingController.setSensitivity(0.8f);
+        autoSnappingController.setSensitivity(0.9f);
 
         scanbotCameraView.addPictureCallback(this);
 
-        userGuidanceHint = findViewById(R.id.userGuidanceHint);
+
 
         shutterButton = findViewById(R.id.shutterButton);
         shutterButton.setOnClickListener(new View.OnClickListener() {
@@ -118,28 +122,6 @@ public class ScannerBot extends AppCompatActivity implements PictureCallback, Co
     }
 
 
-
-
-    private static void persistImage(Bitmap bitmap, String name) {
-        String filename = name;
-        File sd = Environment.getExternalStorageDirectory();
-        File dest = new File(sd, filename);
-        try {
-            Log.d("creating ", "trying to make a image");
-            FileOutputStream out = new FileOutputStream(dest);
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-            Log.d("creating2 ", "made image check" + dest.getAbsolutePath().toString());
-
-            out.flush();
-            out.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-
     @Override
     public void onResume() {
         super.onResume();
@@ -152,19 +134,6 @@ public class ScannerBot extends AppCompatActivity implements PictureCallback, Co
         scanbotCameraView.onPause();
     }
 
-    @Override
-    public boolean handleResult(final ContourDetectorFrameHandler.DetectedFrame detectedFrame) {
-        // Here you are continuously notified about contour detection results.
-        // For example, you can show a user guidance text depending on the current detection status.
-        userGuidanceHint.post(new Runnable() {
-            @Override
-            public void run() {
-                showUserGuidance(detectedFrame.detectionResult);
-            }
-        });
-
-        return false; // typically you need to return false
-    }
 
     private void showUserGuidance(final DetectionResult result) {
         if (!autoSnappingEnabled) {
@@ -205,7 +174,7 @@ public class ScannerBot extends AppCompatActivity implements PictureCallback, Co
                 userGuidanceHint.setVisibility(View.VISIBLE);
                 break;
             default:
-                userGuidanceHint.setVisibility(View.GONE);
+                userGuidanceHint.setVisibility(View.VISIBLE);
                 break;
         }
 
@@ -214,12 +183,27 @@ public class ScannerBot extends AppCompatActivity implements PictureCallback, Co
 
     @Override
     public void onPictureTaken(byte[] image, int imageOrientation) {
-        Intent in1 = new Intent(this, TaggingImages.class);
-        Bundle extras = new Bundle();
-//        extras.putByteArray("image", image);
-        extras.putInt("orientation", imageOrientation);
-        in1.putExtra("bundle", extras);
-        startActivity(in1);
+
+        File file = new File(getFilesDir()+"/file.png");
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            fos.write(image);
+            fos.flush();
+            fos.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        Intent anotherIntent = new Intent(this, TaggingImages.class);
+        anotherIntent.putExtra("image", file.getAbsolutePath().toString());
+        startActivity(anotherIntent);
+        finish();
+
     }
 
     private void setAutoSnapEnabled(boolean enabled) {

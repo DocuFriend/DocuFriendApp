@@ -13,10 +13,40 @@
         android:layout_height="match_parent"
         android:layout_weight="1"
          />
-    <EditText
-        android:id="@+id/textview"
-        android:layout_width="wrap_content"
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="Input Tag"/>
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/billButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Bills" />
+
+        <Button
+            android:id="@+id/familyIdButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Family" />
+
+        <Button
+            android:id="@+id/urgentDocuements"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Urgent" />
+
+        <Button
+            android:id="@+id/otherDocuments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Other" />
+
+    </LinearLayout>
+
 </LinearLayout>
